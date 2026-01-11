@@ -1,0 +1,93 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      SHARD_COUNT: 5
+    ports:
+      - "3000:3000"
+    profiles: [app]
+    networks: [sharding]
+
+  shard:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: shard
+      POSTGRES_USER: postgres
+    ports:
+      - "5433-5437:5432"
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=200
+    volumes:
+      - shard_data:/var/lib/postgresql/data
+    profiles: [infra]
+    networks: [sharding]
+
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    profiles: [workers]
+    networks: [sharding]
+
+  # ---------- MONITORING ----------
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [sharding]
+    profiles: [infra]
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks: [sharding]
+    profiles: [infra]
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    networks: [sharding]
+    profiles: [infra]
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:password@shard:5432/shard?sslmode=disable"
+    ports:
+      - "9187:9187"
+    networks: [sharding]
+    profiles: [infra]
+
+volumes:
+  shard_data:
+
+networks:
+  sharding:
+    name: sharding-net
+
+# docker compose -f docker-compose.monitoring.yml --profile infra up --scale shard=5
+# docker compose -f docker-compose.monitoring.yml --profile app up api
+# docker compose -f docker-compose.monitoring.yml --profile workers up --scale ingest=10
+
+# http://localhost:3001/   admin/admin
+# http://localhost:9090/
+# http://localhost:8080/
