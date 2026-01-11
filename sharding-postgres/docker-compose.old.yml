@@ -1,0 +1,85 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - shard1
+      - shard2
+      - shard3
+
+  shard1:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: shard1
+    ports:
+      - "5433:5432"
+
+  shard2:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: shard2
+    ports:
+      - "5434:5432"
+
+  shard3:
+    image: postgres:1
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: shard3
+    ports:
+      - "5435:5432"
+
+  ingest1:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    environment:
+      START_ID: 1_000_000
+      END_ID: 1_500_000
+    depends_on:
+      - api
+
+  ingest2:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    environment:
+      START_ID: 2_000_000
+      END_ID: 2_500_000
+    depends_on:
+      - api
+
+  ingest3:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    environment:
+      START_ID: 3_000_000
+      END_ID: 3_500_000
+    depends_on:
+      - api
+
+  ingest4:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    environment:
+      START_ID: 4_000_000
+      END_ID: 4_500_000
+    depends_on:
+      - api
+
+  ingest5:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    environment:
+      START_ID: 5_000_000
+      END_ID: 5_500_000
+    depends_on:
+      - api

@@ -1,0 +1,43 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      SHARD_COUNT: 5
+    ports:
+      - "3000:3000"
+    profiles:
+      - app
+    networks:
+      - sharding
+
+  shard:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: shard
+    profiles:
+      - infra
+    networks:
+      - sharding
+
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    profiles:
+      - workers
+    networks:
+      - sharding
+
+networks:
+  sharding:
+    name: sharding-net
+
+# docker compose up --build --scale shard=5 --scale ingest=10 api shard ingest
+# docker compose --profile infra up --scale shard=5
+# docker compose --profile app up api
+# docker compose --profile workers up --scale ingest=1
+# docker compose build api
+# docker compose run ingest sh
