@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:18
+    container_name: postgres_db
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: demo
+    ports:
+      - "5432:5432"
+    profiles:
+      - infra
+    networks:
+      - sharding
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4_container
+    restart: always
+    profiles:
+      - monitor
+    ports:
+      - "8888:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user-name@domain-name.com
+      PGADMIN_DEFAULT_PASSWORD: strong-password
+    networks:
+      - sharding
+
+  app:
+    build: .
+    profiles:
+      - app
+    networks:
+      - sharding
+
+networks:
+  sharding:
+    name: sharding-net
+
+
+# docker compose --profile infra up
+# docker compose --profile monitor up
+# docker compose --profile app up
+# docker compose build app
+# docker compose run app sh
